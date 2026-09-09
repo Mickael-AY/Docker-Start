@@ -13,6 +13,7 @@ une fois terminé.
 | 1 | 01 | Welcome to Docker — Part 1 : Pull and Run | [job-01-welcome-to-docker](./job-01-welcome-to-docker/README.md) | `job-01-welcome-to-docker` |
 | 1 | 02 | Welcome to Docker — Part 2 : Build and Push | [job-02-construction-et-publication-image](./job-02-construction-et-publication-image/README.md) | `job-02-construction-et-publication-image` |
 | 1 | 03 | Welcome to Docker — Part 3 : Super Mario | [job-03-supermario-docker-desktop](./job-03-supermario-docker-desktop/README.md) | `job-03-supermario-docker-desktop` |
+| 2 | 04 | Docker Apache — `phpinfo()` | [job-04-apache-php-phpinfo](./job-04-apache-php-phpinfo/README.md) | `job-04-apache-php-phpinfo` |
 
 ## Organisation du dépôt
 
@@ -26,9 +27,13 @@ Docker-Start/
 │   ├── README.md
 │   ├── images/
 │   └── welcome-to-docker/           <- le projet cloné, avec mes modifications
-└── job-03-supermario-docker-desktop/
+├── job-03-supermario-docker-desktop/
+│   ├── README.md
+│   └── images/
+└── job-04-apache-php-phpinfo/
     ├── README.md
-    └── images/
+    ├── images/
+    └── docker-apache-php/           <- le Dockerfile et la page index.php
 ```
 
 ## Convention de travail
