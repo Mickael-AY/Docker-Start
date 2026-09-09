@@ -15,6 +15,7 @@ une fois terminé.
 | 1 | 03 | Welcome to Docker — Part 3 : Super Mario | [job-03-supermario-docker-desktop](./job-03-supermario-docker-desktop/README.md) | `job-03-supermario-docker-desktop` |
 | 2 | 04 | Docker Apache — `phpinfo()` | [job-04-apache-php-phpinfo](./job-04-apache-php-phpinfo/README.md) | `job-04-apache-php-phpinfo` |
 | 3 | 05 | Tic Tac Toe — Docker et volumes | [job-05-tic-tac-toe-volume](./job-05-tic-tac-toe-volume/README.md) | `job-05-tic-tac-toe-volume` |
+| 4 | 06 | Réseautage — application multi-conteneurs | [job-06-reseau-docker-compose](./job-06-reseau-docker-compose/README.md) | `job-06-reseau-docker-compose` |
 
 ## Organisation du dépôt
 
@@ -35,10 +36,14 @@ Docker-Start/
 │   ├── README.md
 │   ├── images/
 │   └── docker-apache-php/           <- le Dockerfile et la page index.php
-└── job-05-tic-tac-toe-volume/
+├── job-05-tic-tac-toe-volume/
+│   ├── README.md
+│   ├── images/
+│   └── tic-tac-toe/                 <- le jeu, le Dockerfile et la config Nginx
+└── job-06-reseau-docker-compose/
     ├── README.md
     ├── images/
-    └── tic-tac-toe/                 <- le jeu, le Dockerfile et la config Nginx
+    └── projet-multi-conteneurs/     <- les 4 services et le docker-compose.yml
 ```
 
 ## Convention de travail

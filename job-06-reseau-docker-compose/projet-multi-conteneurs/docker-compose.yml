@@ -1,0 +1,73 @@
+# Application multi-conteneurs : base de donnees, API, frontend et administration.
+# Les quatre services partagent un meme reseau, ce qui leur permet de
+# s'appeler par leur nom au lieu d'une adresse IP.
+
+services:
+
+  # --- Base de donnees MySQL -------------------------------------------------
+  database:
+    image: mysql:8.0
+    container_name: mysql_container       # nom attendu par server.js (DB_HOST)
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: projetdb
+    ports:
+      - "3307:3306"                       # 3306 deja occupe sur la machine hote
+    volumes:
+      - db-data:/var/lib/mysql            # persistance des donnees
+    networks:
+      - app-network
+
+  # --- API Node.js -----------------------------------------------------------
+  backend:
+    build: ./backend
+    container_name: backend_container     # nom attendu par nginx.conf (proxy_pass)
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql_container
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: projetdb
+    ports:
+      - "3000:3000"
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  # --- Frontend servi par Nginx ---------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_container
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # --- Administration de la base de donnees ---------------------------------
+  adminer:
+    image: adminer
+    container_name: adminer_container
+    restart: unless-stopped
+    ports:
+      - "8081:8080"                       # Adminer ecoute sur 8080 en interne
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+# Reseau commun aux quatre services
+networks:
+  app-network:
+    driver: bridge
+
+# Volume nomme pour les donnees MySQL
+volumes:
+  db-data:
