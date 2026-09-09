@@ -12,6 +12,7 @@ une fois terminé.
 |------|-----|-------|-------|---------|
 | 1 | 01 | Welcome to Docker — Part 1 : Pull and Run | [job-01-welcome-to-docker](./job-01-welcome-to-docker/README.md) | `job-01-welcome-to-docker` |
 | 1 | 02 | Welcome to Docker — Part 2 : Build and Push | [job-02-construction-et-publication-image](./job-02-construction-et-publication-image/README.md) | `job-02-construction-et-publication-image` |
+| 1 | 03 | Welcome to Docker — Part 3 : Super Mario | [job-03-supermario-docker-desktop](./job-03-supermario-docker-desktop/README.md) | `job-03-supermario-docker-desktop` |
 
 ## Organisation du dépôt
 
@@ -21,10 +22,13 @@ Docker-Start/
 ├── job-01-welcome-to-docker/
 │   ├── README.md                    <- le rendu détaillé du job
 │   └── images/                      <- captures d'écran annotées dans le rendu
-└── job-02-construction-et-publication-image/
+├── job-02-construction-et-publication-image/
+│   ├── README.md
+│   ├── images/
+│   └── welcome-to-docker/           <- le projet cloné, avec mes modifications
+└── job-03-supermario-docker-desktop/
     ├── README.md
-    ├── images/
-    └── welcome-to-docker/           <- le projet cloné, avec mes modifications
+    └── images/
 ```
 
 ## Convention de travail
