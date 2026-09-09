@@ -456,34 +456,129 @@ docker run -d -p 8088:3000 -v ${PWD}/src:/app/src --name welcome-dev welcome-to-
 
 ## 11. Publier l'image sur le Docker Hub
 
-> 🚧 **Section à compléter** — cette étape nécessite d'être connecté à un compte
-> Docker Hub personnel.
-
-Les commandes à exécuter, dans l'ordre :
+### 11.1 — Se connecter
 
 ```powershell
-# 1. Se connecter au Docker Hub
 docker login
-
-# 2. Retaguer l'image avec le nom du compte (obligatoire pour publier)
-docker tag welcome-to-docker:v2 <utilisateur>/welcome-to-docker:v2
-
-# 3. Envoyer l'image sur le Hub
-docker push <utilisateur>/welcome-to-docker:v2
 ```
 
-> **Pourquoi retaguer ?** Le Docker Hub n'accepte que des images nommées
-> `utilisateur/image:tag`. Une image nommée simplement `welcome-to-docker:v2`
-> n'a pas de propriétaire déclaré : `docker push welcome-to-docker:v2` essaierait
-> de publier dans l'espace officiel `library/` de Docker et renverrait :
+```
+Authenticating with existing credentials... [Username: mickael1995]
+
+ Info -> To login with a different account, run 'docker logout' followed by 'docker login'
+
+Login Succeeded
+```
+
+> **Le piège que j'ai rencontré à la création du compte :** un **Docker ID**
+> n'accepte que des **lettres minuscules et des chiffres**, entre 4 et 30
+> caractères — ni majuscule, ni tiret, ni point. Un identifiant contenant des
+> majuscules est refusé avec un message générique *« Something went wrong. Try
+> again. »* qui n'explique rien.
 >
-> ```
-> denied: requested access to the resource is denied
+> **Deuxième piège :** être connecté dans **Docker Desktop** ne connecte pas
+> forcément la **ligne de commande**. Le fichier `~/.docker/config.json`
+> affichait encore `"auths": {}`. Un `docker login` dans le terminal récupère la
+> session existante de Docker Desktop et complète l'authentification sans rien
+> redemander.
+
+### 11.2 — Première tentative : l'erreur attendue
+
+Publier l'image telle quelle échoue :
+
+```powershell
+docker push welcome-to-docker:v2
+```
+
+```
+push access denied, repository does not exist or may require authorization:
+server message: insufficient_scope: authorization failed
+```
+
+![Erreur : push access denied](./images/14-docker-push-erreur-denied.png)
+
+> **Analyse :** l'image s'appelle `welcome-to-docker:v2`, sans espace de nom.
+> Docker complète alors le nom en `docker.io/library/welcome-to-docker` —
+> `library/`, c'est l'espace réservé aux **images officielles** de Docker.
+> Évidemment, je n'ai pas le droit d'y publier.
+>
+> À noter : les couches passent d'abord en `Waiting`, le refus n'arrive qu'après.
+> L'authentification est bien passée, c'est l'**autorisation** sur ce dépôt
+> précis qui est refusée — d'où `insufficient_scope`.
+
+### 11.3 — Retaguer avec le nom du compte
+
+```powershell
+docker tag welcome-to-docker:v2 mickael1995/welcome-to-docker:v2
+docker images | Select-String welcome-to-docker
+```
+
+```
+mickael1995/welcome-to-docker:v2   924bb4fbcbfe   473MB   128MB
+welcome-to-docker:v1               f37c7cdb1347   473MB   128MB
+welcome-to-docker:v2               924bb4fbcbfe   473MB   128MB
+```
+
+![Retaguage de l'image](./images/15-docker-tag.png)
+
+> **Le détail qui fait tout comprendre :** `mickael1995/welcome-to-docker:v2` et
+> `welcome-to-docker:v2` ont **exactement le même ID** (`924bb4fbcbfe`).
+>
+> `docker tag` ne copie **rien** : il pose simplement une seconde étiquette sur
+> la même image. C'est pour ça que la commande est instantanée sur 473 Mo, et
+> pourquoi `docker images` semble afficher deux fois la même taille — l'image
+> n'occupe le disque qu'une seule fois.
+>
+> Le format complet d'un nom d'image est `registre/utilisateur/image:tag`.
+> Comme `docker.io` est le registre par défaut, `mickael1995/welcome-to-docker:v2`
+> suffit.
+
+### 11.4 — Publier
+
+```powershell
+docker push mickael1995/welcome-to-docker:v2
+```
+
+```
+The push refers to repository [docker.io/mickael1995/welcome-to-docker]
+8b3d9db9096f: Pushed
+8cb1fe80ca0c: Pushed
+16da5a640377: Pushed
+5ed42389c126: Pushed
+e207cfb68f7b: Pushed
+29e31a492881: Pushed
+efbef6f9e333: Pushed
+55afa1ecc21d: Pushed
+eb8fa33779c8: Pushed
+a2980c1fee17: Pushed
+3fd869073bff: Pushed
+v2: digest: sha256:924bb4fbcbfe845d1f260b895f4c17f46c31cacdfee46afdd8e867db5300ba7c size: 856
+```
+
+![Publication de l'image sur le Docker Hub](./images/16-docker-push.png)
+
+> **11 couches envoyées**, une par ligne `Pushed` — ce sont les mêmes couches que
+> celles construites par le `docker build`. Le `digest` final est l'empreinte de
+> l'image publiée : c'est ce que verra quiconque fera un `docker pull`.
+
+### 11.5 — Vérification sur le Docker Hub
+
+### 👉 https://hub.docker.com/r/mickael1995/welcome-to-docker
+
+![L'image publiée sur le Docker Hub](./images/17-docker-hub-image-publiee.jpg)
+
+> L'image est **publique** : n'importe qui peut désormais la récupérer et la
+> lancer, sans même cloner le projet ni installer Node.js :
+>
+> ```powershell
+> docker run -d -p 8088:3000 --name welcome-mickael mickael1995/welcome-to-docker:v2
 > ```
 >
-> **`docker tag` ne duplique pas l'image** : il ajoute simplement un second nom
-> pointant vers le même ID. C'est pour ça que l'opération est instantanée, même
-> sur 473 Mo.
+> C'est tout l'intérêt de Docker résumé en une commande : l'application, son
+> serveur et son environnement d'exécution voyagent ensemble.
+>
+> **Pour un membre de la promo**, il n'y a donc rien à partager d'autre que ce
+> nom : `mickael1995/welcome-to-docker:v2`.
 
 ---
 
@@ -549,8 +644,8 @@ docker run -d -p 8090:3000 --name welcome-v2 welcome-to-docker:v2
 
 # 8. Publier
 docker login
-docker tag welcome-to-docker:v2 <utilisateur>/welcome-to-docker:v2
-docker push <utilisateur>/welcome-to-docker:v2
+docker tag welcome-to-docker:v2 mickael1995/welcome-to-docker:v2
+docker push mickael1995/welcome-to-docker:v2
 
 # 9. Nettoyer
 docker rm -f welcome-v1 welcome-v2
@@ -587,7 +682,12 @@ docker rmi welcome-to-docker:v1 welcome-to-docker:v2
    Compose automatise.
 
 7. **Publier impose de retaguer** avec son nom de compte. `docker tag` ne copie
-   rien, il ajoute juste un nom sur la même image.
+   rien, il ajoute juste un nom sur la même image — l'ID reste identique.
+
+8. **Authentification et autorisation sont deux choses différentes.** Le
+   `docker push` refusé renvoyait `insufficient_scope` alors que j'étais bien
+   connecté : le compte était reconnu, mais pas autorisé à écrire dans
+   `library/`.
 
 ---
 
