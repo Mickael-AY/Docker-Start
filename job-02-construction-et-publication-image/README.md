@@ -584,7 +584,17 @@ v2: digest: sha256:924bb4fbcbfe845d1f260b895f4c17f46c31cacdfee46afdd8e867db5300b
 
 ## 12. Récupérer et modifier l'image d'un membre de la promo
 
-> 🚧 **Section à compléter** — en attente de l'image publiée par un camarade.
+> ℹ️ **Étape non réalisée** : aucune image publiée par un camarade n'était
+> disponible au moment du rendu. La procédure est documentée ci-dessous, prête à
+> être appliquée.
+
+Mon image est en revanche publiée et **immédiatement utilisable** par n'importe
+qui de la promo :
+
+```powershell
+docker pull mickael1995/welcome-to-docker:v2
+docker run -d -p 8088:3000 --name welcome-mickael mickael1995/welcome-to-docker:v2
+```
 
 La marche à suivre une fois l'image d'un camarade disponible :
 
