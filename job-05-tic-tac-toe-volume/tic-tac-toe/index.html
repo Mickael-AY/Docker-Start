@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <!-- Oui je sais ! Je vous ais interdit le style dans le code -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+        td {
+            width: 80px;
+            height: 80px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 36px;
+            font-weight: bold;
+            border: 2px solid #000;
+            cursor: pointer;
+        }
+        td:hover {
+            background-color: #f0f0f0;
+        }
+        td.taken {
+            cursor: not-allowed;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+    <div class="status">C'est au tour de <span id="currentPlayer">X</span>.</div>
+    <table>
+        <tr>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+        </tr>
+        <tr>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+        </tr>
+        <tr>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+            <td onclick="makeMove(this)"></td>
+        </tr>
+    </table>
+    <button onclick="resetGame()">Réinitialiser</button>
+
+    <script>
+        let currentPlayer = 'X';
+        let gameActive = true;
+        const statusDisplay = document.querySelector('.status');
+        const cells = document.querySelectorAll('td');
+
+        async function saveResults(winner) {
+            const response = await fetch('/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ winner }),
+            });
+            return response.ok;
+        }
+
+        function makeMove(cell) {
+            if (!gameActive || cell.textContent !== '') return;
+
+            // Ajouter le symbole du joueur actuel
+            cell.textContent = currentPlayer;
+            cell.classList.add('taken');
+
+            // Vérifier si le joueur actuel a gagné
+            if (checkWin()) {
+                statusDisplay.textContent = `Le joueur ${currentPlayer} a gagné !`;
+                gameActive = false;
+                saveResults(currentPlayer);
+                return;
+            }
+
+            // Vérifier si c'est un match nul
+            if (Array.from(cells).every(cell => cell.textContent !== '')) {
+                statusDisplay.textContent = "C'est un match nul !";
+                saveResults('Draw');
+                gameActive = false;
+                return;
+            }
+
+            // Passer au joueur suivant
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusDisplay.innerHTML = `C'est au tour de <span id="currentPlayer">${currentPlayer}</span>.`;
+        }
+
+        function checkWin() {
+            const winningCombinations = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Lignes
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colonnes
+                [0, 4, 8], [2, 4, 6]             // Diagonales
+            ];
+
+            return winningCombinations.some(combination => {
+                return combination.every(index => {
+                    return cells[index].textContent === currentPlayer;
+                });
+            });
+        }
+
+        function resetGame() {
+            currentPlayer = 'X';
+            gameActive = true;
+            statusDisplay.innerHTML = `C'est au tour de <span id="currentPlayer">${currentPlayer}</span>.`;
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('taken');
+            });
+        }
+    </script>
+</body>
+</html>
