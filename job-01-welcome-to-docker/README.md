@@ -64,11 +64,27 @@ Docker version 29.2.1, build a5c7197
 
 ### 2.2 — Première erreur rencontrée : le daemon n'est pas démarré
 
-J'ai enchaîné avec `docker info` et je suis tombé sur une erreur :
+J'ai enchaîné avec les commandes suivantes, et toutes celles qui ont besoin du
+moteur Docker ont échoué :
 
 ```powershell
-docker info
+docker --version
+docker ps
+docker images
 ```
+
+```
+Docker version 29.2.1, build a5c7197
+
+failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine;
+check if the path is correct and if the daemon is running:
+open //./pipe/dockerDesktopLinuxEngine: Le fichier spécifié est introuvable.
+```
+
+![Erreur : le daemon Docker n'est pas démarré](./images/02-docker-info-erreur-daemon.png)
+
+`docker info` renvoie exactement la même erreur, mais uniquement dans son bloc
+`Server:` — son bloc `Client:` s'affiche normalement :
 
 ```
 Client:
@@ -82,8 +98,6 @@ check if the path is correct and if the daemon is running:
 open //./pipe/dockerDesktopLinuxEngine: Le fichier spécifié est introuvable.
 ```
 
-![Erreur : le daemon Docker n'est pas démarré](./images/02-docker-info-erreur-daemon.png)
-
 > **Analyse de l'erreur — et c'est LA notion clé du job :**
 > Docker est composé de **deux parties distinctes** :
 >
@@ -92,9 +106,9 @@ open //./pipe/dockerDesktopLinuxEngine: Le fichier spécifié est introuvable.
 > | **Le client** (`docker` en ligne de commande) | Envoie les ordres | ✅ Fonctionne |
 > | **Le daemon / moteur** (`dockerd`) | Exécute réellement les conteneurs | ❌ Éteint |
 >
-> Le bloc `Client:` s'affiche correctement, mais le bloc `Server:` renvoie une
-> erreur de connexion : le client n'arrive pas à joindre le moteur via le
-> *named pipe* Windows.
+> La capture le montre parfaitement : `docker --version` répond sans problème,
+> alors que `docker ps` et `docker images` échouent tous les deux sur la même
+> erreur de connexion au *named pipe* Windows.
 >
 > **Toutes** les commandes qui ont besoin du moteur échouaient de la même façon :
 > `docker ps`, `docker images`, `docker pull`, `docker run`…
@@ -102,9 +116,13 @@ open //./pipe/dockerDesktopLinuxEngine: Le fichier spécifié est introuvable.
 > répondre, car elles sont purement côté client.
 
 **Correction :** lancer **Docker Desktop** (qui démarre le daemon), puis attendre
-que l'icône de la baleine passe au vert dans la barre des tâches.
+que la mention **« Engine running »** apparaisse en bas de la fenêtre.
 
-![Docker Desktop en cours de démarrage](./images/03-docker-desktop-demarrage.png)
+![Docker Desktop, moteur démarré](./images/03-docker-desktop-demarrage.png)
+
+> On retrouve dans cette fenêtre exactement les mêmes conteneurs que ceux
+> listés par `docker ps` en ligne de commande : Docker Desktop n'est qu'une
+> interface graphique posée sur le même moteur.
 
 ---
 
@@ -130,10 +148,51 @@ Server:
 
 ![docker info avec le moteur démarré](./images/04-docker-info.png)
 
-> **Lecture du résultat :** le bloc `Server:` s'affiche enfin. Il donne un état
-> global du moteur : 8 conteneurs connus (4 en cours d'exécution, 4 arrêtés) et
-> 10 images stockées localement — ce sont mes projets précédents, je n'y touche pas.
-> `Storage Driver` indique comment Docker empile les couches d'images sur le disque.
+> **Lecture du résultat :** la sortie de `docker info` est longue (une centaine
+> de lignes) ; la capture en montre la fin, c'est-à-dire les informations du
+> **moteur** : `Kernel Version: 6.6.87.2-microsoft-standard-WSL2` (Docker tourne
+> bien dans WSL 2), `OSType: linux`, `CPUs: 8`, `Total Memory: 7.649GiB`.
+> Le début de la sortie donne, lui, le décompte des conteneurs et des images.
+
+### 2.4 — `docker version` : la preuve que les deux parties se parlent
+
+Plus lisible que `docker info` pour vérifier l'état du couple client / moteur :
+
+```powershell
+docker version
+```
+
+```
+Client:
+ Version:           29.2.1
+ API version:       1.53
+ Go version:        go1.25.6
+ Git commit:        a5c7197
+ Built:             Mon Feb  2 17:20:16 2026
+ OS/Arch:           windows/amd64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.64.0 (221278)
+ Engine:
+  Version:          29.2.1
+  API version:      1.53 (minimum version 1.44)
+  OS/Arch:          linux/amd64
+ containerd:
+  Version:          v2.2.1
+ runc:
+  Version:          1.3.4
+```
+
+![docker version : blocs Client et Server](./images/04b-docker-version-client-serveur.png)
+
+> **La séparation client / moteur saute aux yeux ici :**
+> - le **client** tourne en `windows/amd64` — c'est un programme Windows ;
+> - le **moteur** tourne en `linux/amd64` — c'est un service Linux, hébergé
+>   dans WSL 2.
+>
+> C'est toute l'astuce de Docker Desktop sous Windows : les conteneurs sont des
+> conteneurs **Linux**, pilotés depuis Windows. Si le bloc `Server:` manque ou
+> renvoie une erreur, c'est que la partie Linux ne tourne pas.
 
 ---
 
@@ -147,7 +206,10 @@ images par défaut.
 docker login
 ```
 
-![Connexion au compte Docker Hub](./images/05-docker-login.png)
+> ℹ️ Cette étape n'a pas de capture : elle affiche des informations de compte à
+> l'écran. Le statut de connexion se vérifie sans rien exposer avec
+> `docker info | Select-String "Username"` — une ligne `Username:` apparaît
+> quand une session est ouverte, rien sinon.
 
 > **À retenir :** se connecter n'est **pas obligatoire** pour télécharger une
 > image **publique** comme `docker/welcome-to-docker`. Je l'ai d'ailleurs
@@ -348,7 +410,7 @@ docker/welcome-to-docker:latest   c4d56c24da4f       22.2MB         6.03MB
 
 ## 6. Lancer le conteneur (`docker run`)
 
-### 6.1 — La commande du sujet et l'erreur du terminal
+### 6.1 — La commande exacte du sujet
 
 La commande proposée par le sujet, avec `xxxx` remplacé par le port `8088` :
 
@@ -356,23 +418,44 @@ La commande proposée par le sujet, avec `xxxx` remplacé par le port `8088` :
 docker run -it --rm -p 8088:80 docker/welcome-to-docker
 ```
 
-Lancée depuis un terminal Git Bash, elle m'a renvoyé :
-
 ```
-the input device is not a TTY.  If you are using mintty, try prefixing the command with 'winpty'
+/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+/docker-entrypoint.sh: Configuration complete; ready for start up
+2026/09/09 08:37:37 [notice] 1#1: using the "epoll" event method
+2026/09/09 08:37:37 [notice] 1#1: nginx/1.29.0
+2026/09/09 08:37:37 [notice] 1#1: OS: Linux 6.6.87.2-microsoft-standard-WSL2
+2026/09/09 08:37:37 [notice] 1#1: start worker processes
 ```
 
-![Erreur : the input device is not a TTY](./images/12-docker-run-erreur-tty.png)
+![La commande du sujet : le terminal reste attaché aux logs](./images/12-docker-run-it-rm.png)
 
-> **Analyse :** l'option `-t` demande à Docker d'attacher un **pseudo-terminal**
-> (TTY) au conteneur. Certains terminaux sous Windows (Git Bash / MinTTY)
-> n'exposent pas de vrai TTY, d'où l'erreur.
+> **Ce que révèle cette capture :** on découvre que l'image ne contient pas une
+> application mystérieuse, mais un simple serveur **nginx 1.29.0** tournant sur
+> **Alpine Linux**. Les lignes `/docker-entrypoint.sh:` sont le script de
+> démarrage de l'image officielle nginx, qui configure le serveur avant de le
+> lancer.
 >
-> **Trois corrections possibles :**
-> 1. Utiliser **PowerShell** ou **cmd** au lieu de Git Bash — le TTY y est
->    disponible et la commande passe telle quelle ;
-> 2. Préfixer par `winpty` : `winpty docker run -it --rm -p 8088:80 ...` ;
-> 3. Retirer `-it`, qui n'a de toute façon **aucune utilité ici** (voir ci-dessous).
+> **Mais le terminal est bloqué.** Il reste attaché à la sortie du conteneur :
+> aucun nouveau prompt n'apparaît, impossible de taper la moindre commande.
+> Pour reprendre la main il faut `Ctrl` + `C` (ce qui **arrête** le conteneur),
+> ou ouvrir un second terminal. C'est exactement le problème que règle l'option
+> `-d`, utilisée juste en dessous.
+>
+> **Un piège selon le terminal utilisé :** lancée depuis **Git Bash / MinTTY**,
+> cette même commande échoue avec :
+>
+> ```
+> the input device is not a TTY.  If you are using mintty, try prefixing the command with 'winpty'
+> ```
+>
+> L'option `-t` demande un **pseudo-terminal**, que MinTTY n'expose pas à Docker.
+> Trois corrections : utiliser **PowerShell** ou **cmd** (c'est ce que j'ai fait),
+> préfixer par `winpty`, ou retirer `-it` — qui n'a de toute façon **aucune
+> utilité ici** (voir ci-dessous).
 
 ### 6.2 — La commande que j'ai retenue
 
@@ -409,19 +492,27 @@ b14c62bed02b815970a6feeb46490a8d03edf78238e7816fac938aaffb59813f
 
 ### 6.3 — Vérification : le conteneur tourne
 
+Comme d'autres projets tournent déjà sur ma machine, je filtre la liste sur le
+nom du conteneur pour ne voir que celui de l'exercice :
+
 ```powershell
-docker ps
+docker ps --filter name=welcome-exercice
 ```
 
 ```
-CONTAINER ID   IMAGE                      COMMAND                  CREATED          STATUS          PORTS                  NAMES
-b14c62bed02b   docker/welcome-to-docker   "/docker-entrypoint.…"   42 seconds ago   Up 42 seconds   0.0.0.0:8088->80/tcp   welcome-exercice
+CONTAINER ID   IMAGE                      COMMAND                  CREATED         STATUS         PORTS                                     NAMES
+70511063a2aa   docker/welcome-to-docker   "/docker-entrypoint.…"   8 seconds ago   Up 7 seconds   0.0.0.0:8088->80/tcp, [::]:8088->80/tcp   welcome-exercice
 ```
 
 ![Le conteneur apparaît dans docker ps](./images/14-docker-ps-conteneur-actif.png)
 
 > Le `STATUS` est passé à `Up`, et la colonne `PORTS` confirme la redirection
 > `0.0.0.0:8088->80/tcp`. Le conteneur est joignable.
+>
+> **L'option `--filter` (ou `-f`)** évite de chercher son conteneur au milieu de
+> tous les autres. Elle accepte aussi `--filter status=exited`,
+> `--filter ancestor=<image>`… Sans elle, `docker ps` afficherait ici les quatre
+> conteneurs de mon projet précédent en plus.
 
 ---
 
@@ -480,7 +571,7 @@ welcome-exercice
 ### Le conteneur a disparu de `docker ps`… mais existe toujours
 
 ```powershell
-docker ps
+docker ps --filter name=welcome-exercice
 ```
 
 ```
@@ -488,19 +579,21 @@ CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 
 ```powershell
-docker ps -a
+docker ps -a --filter name=welcome-exercice
 ```
 
 ```
-CONTAINER ID   IMAGE                      COMMAND                  CREATED          STATUS                     PORTS   NAMES
-b14c62bed02b   docker/welcome-to-docker   "/docker-entrypoint.…"   44 seconds ago   Exited (0) 1 second ago            welcome-exercice
+CONTAINER ID   IMAGE                      COMMAND                  CREATED          STATUS                      PORTS   NAMES
+70511063a2aa   docker/welcome-to-docker   "/docker-entrypoint.…"   42 seconds ago   Exited (0) 25 seconds ago           welcome-exercice
 ```
 
 ![Le conteneur arrêté, visible uniquement avec docker ps -a](./images/17-docker-ps-a-conteneur-arrete.png)
 
-> **C'est le point le plus important de cette étape.** `docker ps` renvoie une
-> liste vide, mais le conteneur **n'a pas été supprimé** : `docker ps -a` le
-> montre encore, avec le statut `Exited (0)`.
+> **C'est le point le plus important de cette étape.** `docker ps` ne renvoie
+> que les en-têtes de colonnes — donc aucun conteneur — alors que le conteneur
+> **n'a pas été supprimé** : `docker ps -a` le montre encore juste en dessous,
+> avec le statut `Exited (0)`. Une seule option (`-a`) sépare les deux
+> résultats.
 >
 > Le `(0)` est le **code de sortie** du processus : `0` = arrêt propre.
 > Un code différent de `0` signalerait un plantage.
@@ -517,17 +610,11 @@ b14c62bed02b   docker/welcome-to-docker   "/docker-entrypoint.…"   44 seconds 
 
 ```powershell
 docker rm welcome-exercice
+docker ps -a --filter name=welcome-exercice
 ```
 
 ```
 welcome-exercice
-```
-
-```powershell
-docker ps -a
-```
-
-```
 CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 
@@ -764,6 +851,7 @@ docker run -d -p 8088:80 --name welcome-exercice docker/welcome-to-docker
 ```powershell
 # 1. Vérifications
 docker --version
+docker version          # blocs Client ET Server : le moteur repond-il ?
 docker info
 docker ps
 docker ps -a
@@ -778,18 +866,18 @@ docker images docker/welcome-to-docker
 
 # 4. Lancer le conteneur
 docker run -d -p 8088:80 --name welcome-exercice docker/welcome-to-docker
-docker ps
+docker ps --filter name=welcome-exercice
 
 # 5. Y accéder     ->  http://localhost:8088
 
 # 6. Arrêter
 docker stop welcome-exercice
-docker ps
-docker ps -a
+docker ps --filter name=welcome-exercice        # vide
+docker ps -a --filter name=welcome-exercice     # Exited (0)
 
 # 7. Supprimer le conteneur
 docker rm welcome-exercice
-docker ps -a
+docker ps -a --filter name=welcome-exercice     # vide
 
 # 8. Supprimer l'image
 docker rmi docker/welcome-to-docker
